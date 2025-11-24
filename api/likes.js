@@ -1,6 +1,4 @@
-import { Redis } from '@vercel/kv';
-
-const kv = Redis.fromEnv();
+import { kv } from '@vercel/kv';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -33,9 +31,9 @@ export default async function handler(req, res) {
           const { userId, tournamentId, liked } = data || {};
 
           if (!userId || !tournamentId) {
-            return res
-              .status(400)
-              .json({ error: 'userId and tournamentId are required' });
+            return res.status(400).json({
+              error: 'userId and tournamentId are required',
+            });
           }
 
           const key = `likes:${userId}`;
@@ -53,7 +51,6 @@ export default async function handler(req, res) {
 
           return res.status(200).json({ ok: true, likes: updated });
         } catch (e) {
-          console.error('Parse error in /api/likes:', e);
           return res.status(400).json({ error: 'Invalid JSON' });
         }
       });
