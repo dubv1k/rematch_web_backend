@@ -1,0 +1,47 @@
+const { kv } = require('@vercel/kv');
+
+module.exports = async function handler(req, res) {
+  // CORS (чтобы фронт с GitHub Pages мог обращаться)
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  try {
+    if (req.method === 'GET') {
+      // Получаем список турниров
+      const tournaments = (await kv.get('tournaments')) || [];
+      return res.status(200).json(tournaments);
+    }
+
+    if (req.method === 'POST') {
+      // Сохраняем полный список турниров
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk.toString();
+      });
+      req.on('end', async () => {
+        try {
+          const data = JSON.parse(body);
+          if (!Array.isArray(data)) {
+            return res.status(400).json({ error: 'Body must be an array' });
+          }
+          await kv.set('tournaments', data);
+          return res.status(200).json({ ok: true });
+        } catch (e) {
+          return res.status(400).json({ error: 'Invalid JSON' });
+        }
+      });
+      return;
+    }
+
+    res.setHeader('Allow', 'GET,POST,OPTIONS');
+    return res.status(405).end('Method Not Allowed');
+  } catch (err) {
+    console.error('Tournaments API error:', err);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
