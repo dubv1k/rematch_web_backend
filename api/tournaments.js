@@ -1,4 +1,5 @@
-const { kv } = require('@vercel/kv');
+const { Redis } = require('@vercel/kv');
+const kv = Redis.fromEnv();
 
 module.exports = async function handler(req, res) {
   // CORS (чтобы фронт с GitHub Pages мог обращаться)
