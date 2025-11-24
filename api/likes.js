@@ -3,9 +3,6 @@ import { Redis } from '@vercel/kv';
 const kv = Redis.fromEnv();
 
 export default async function handler(req, res) {
-
-
-module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -20,6 +17,7 @@ module.exports = async function handler(req, res) {
       if (!userId) {
         return res.status(400).json({ error: 'userId is required' });
       }
+
       const likes = (await kv.get(`likes:${userId}`)) || [];
       return res.status(200).json(Array.isArray(likes) ? likes : []);
     }
@@ -32,10 +30,12 @@ module.exports = async function handler(req, res) {
       req.on('end', async () => {
         try {
           const data = JSON.parse(body);
-          const { userId, tournamentId, liked } = data;
+          const { userId, tournamentId, liked } = data || {};
 
           if (!userId || !tournamentId) {
-            return res.status(400).json({ error: 'userId and tournamentId are required' });
+            return res
+              .status(400)
+              .json({ error: 'userId and tournamentId are required' });
           }
 
           const key = `likes:${userId}`;
@@ -53,6 +53,7 @@ module.exports = async function handler(req, res) {
 
           return res.status(200).json({ ok: true, likes: updated });
         } catch (e) {
+          console.error('Parse error in /api/likes:', e);
           return res.status(400).json({ error: 'Invalid JSON' });
         }
       });
@@ -65,4 +66,4 @@ module.exports = async function handler(req, res) {
     console.error('Likes API error:', err);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
-};
+}
