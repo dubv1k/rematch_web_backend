@@ -1,9 +1,6 @@
-import { Redis } from '@vercel/kv';
-
-const kv = Redis.fromEnv();
+import { kv } from '@vercel/kv';
 
 export default async function handler(req, res) {
-  // CORS — чтобы фронт с GitHub Pages / другого домена мог обращаться
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -14,13 +11,11 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      // Получаем список турниров
       const tournaments = (await kv.get('tournaments')) || [];
       return res.status(200).json(Array.isArray(tournaments) ? tournaments : []);
     }
 
     if (req.method === 'POST') {
-      // Сохраняем полный список турниров
       let body = '';
       req.on('data', (chunk) => {
         body += chunk.toString();
@@ -28,6 +23,7 @@ export default async function handler(req, res) {
       req.on('end', async () => {
         try {
           const data = JSON.parse(body);
+
           if (!Array.isArray(data)) {
             return res.status(400).json({ error: 'Body must be an array' });
           }
@@ -35,7 +31,6 @@ export default async function handler(req, res) {
           await kv.set('tournaments', data);
           return res.status(200).json({ ok: true });
         } catch (e) {
-          console.error('Parse error in /api/tournaments:', e);
           return res.status(400).json({ error: 'Invalid JSON' });
         }
       });
