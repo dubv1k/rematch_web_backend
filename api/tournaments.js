@@ -3,10 +3,7 @@ import { Redis } from '@vercel/kv';
 const kv = Redis.fromEnv();
 
 export default async function handler(req, res) {
-
-
-module.exports = async function handler(req, res) {
-  // CORS (чтобы фронт с GitHub Pages мог обращаться)
+  // CORS — чтобы фронт с GitHub Pages / другого домена мог обращаться
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -19,7 +16,7 @@ module.exports = async function handler(req, res) {
     if (req.method === 'GET') {
       // Получаем список турниров
       const tournaments = (await kv.get('tournaments')) || [];
-      return res.status(200).json(tournaments);
+      return res.status(200).json(Array.isArray(tournaments) ? tournaments : []);
     }
 
     if (req.method === 'POST') {
@@ -34,9 +31,11 @@ module.exports = async function handler(req, res) {
           if (!Array.isArray(data)) {
             return res.status(400).json({ error: 'Body must be an array' });
           }
+
           await kv.set('tournaments', data);
           return res.status(200).json({ ok: true });
         } catch (e) {
+          console.error('Parse error in /api/tournaments:', e);
           return res.status(400).json({ error: 'Invalid JSON' });
         }
       });
@@ -49,4 +48,4 @@ module.exports = async function handler(req, res) {
     console.error('Tournaments API error:', err);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
-};
+}
