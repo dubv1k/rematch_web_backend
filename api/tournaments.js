@@ -11,27 +11,26 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      // 1. Получаем массив турниров (или пустой)
+      // 1. Берём турниры из KV
       const tournaments = (await kv.get('tournaments')) || [];
 
-      // 2. Нормализуем "сегодня" до полуночи
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // 2. Строка "сегодня" в формате YYYY-MM-DD (UTC)
+      const todayStr = new Date().toISOString().slice(0, 10);
 
-      // 3. Фильтруем: оставляем только те, у которых дата >= сегодня
+      // 3. Фильтруем: оставляем турниры с датой >= сегодня
       const filtered = tournaments.filter((t) => {
-        if (!t.date) return true; // без даты не трогаем
-        const d = new Date(t.date + 'T00:00:00'); // формат YYYY-MM-DD
-        if (Number.isNaN(d.getTime())) return true; // если дата битая — тоже оставляем
-        return d >= today;
+        if (!t.date) return true;            // без даты — не трогаем
+        if (typeof t.date !== 'string') return true;
+        // если дата раньше сегодняшней — выкидываем
+        return t.date >= todayStr;
       });
 
-      // 4. Если что-то удалилось — сохраняем очищенный массив
+      // 4. Если что-то реально удалили — сохраняем обратно в KV
       if (filtered.length !== tournaments.length) {
         await kv.set('tournaments', filtered);
       }
 
-      // 5. Возвращаем уже очищенный список
+      // 5. Отдаём уже очищенный список
       return res.status(200).json(filtered);
     }
 
@@ -43,11 +42,9 @@ export default async function handler(req, res) {
       req.on('end', async () => {
         try {
           const data = JSON.parse(body);
-
           if (!Array.isArray(data)) {
             return res.status(400).json({ error: 'Body must be an array' });
           }
-
           await kv.set('tournaments', data);
           return res.status(200).json({ ok: true });
         } catch (e) {
